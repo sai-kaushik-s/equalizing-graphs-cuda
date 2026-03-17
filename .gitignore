@@ -4,5 +4,7 @@
 *.ptx
 *.cubin
 *.fatbin
-obj/
+build/
+input/
+output/
 a2

@@ -2,7 +2,7 @@ CXX = nvcc
 CXXFLAGS = -O3 -Xcompiler -fopenmp -I./include
 
 SRC_DIR = src
-OBJ_DIR = obj
+OBJ_DIR = build
 
 SRCS = $(wildcard $(SRC_DIR)/*.cu)
 OBJS = $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(SRCS))
