@@ -9,3 +9,4 @@ input/
 output/
 a2
 .clang-format
+.vscode/
