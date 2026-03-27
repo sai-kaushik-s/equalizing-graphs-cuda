@@ -1,39 +1,40 @@
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-
 #include "common.cuh"
+#include "kMeans.cuh"
 #include "knn.cuh"
-int main(int argc, char** argv) {
+#include "knnApprox.cuh"
+
+#include <iostream>
+#include <string>
+
+int main(int argc, char **argv) {
     if (argc != 2) {
         std::cerr << "Usage: ./a2 <input_file.txt>\n";
         return 1;
     }
 
-    PointCloud pc;
-    int k, T;
+    PointCloudInt pc;
+    int32_t k, T;
 
-    if (!readInputFile(argv[1], pc, k, T)) {
+    if (!readInputFileInt(argv[1], pc, k, T)) {
         return 1;
     }
 
-    std::string dir = "output/n_" + std::to_string(pc.numPoints) +
-                  "_k_" + std::to_string(k) +
-                  "_T_" + std::to_string(T);
-    std::filesystem::create_directories(dir);
+    int32_t *outKnn = new int32_t[pc.numPoints];
+    int32_t *outKnnApprox = new int32_t[pc.numPoints];
+    int32_t *outKMeans = new int32_t[pc.numPoints];
 
-    Logger logger(dir + "/run.log");
+    knn::knnGPUInt(pc, k, outKnn);
+    knnApprox::knnApproxGPUInt(pc, k, outKnnApprox);
+    kMeans::kMeansGPUInt(pc, k, T, outKMeans);
 
-    std::cout << "Reading input file...\n";
-    std::cout << "Loaded " << pc.numPoints << " points. (k=" << k << ", T=" << T << ")\n\n";
+    writeOutputFileInt("knn.txt", pc, outKnn);
+    writeOutputFileInt("approx.knn.txt", pc, outKnnApprox);
+    writeOutputFileInt("kmeans.txt", pc, outKMeans);
 
-    int* outKnnGPU = new int[pc.numPoints];
-
-    auto knnGPUDuration = timeFunction("GPU KNN", knnGPU, pc, k, outKnnGPU);
-    writeOutputFile(dir + "/knn.txt", pc, outKnnGPU);
-
-    delete[] outKnnGPU;
-    freePointCloud(pc);
+    delete[] outKnn;
+    delete[] outKnnApprox;
+    delete[] outKMeans;
+    freePointCloudInt(pc);
 
     return 0;
 }

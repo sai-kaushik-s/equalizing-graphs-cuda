@@ -1,3 +1,5 @@
+#include "common.cuh"
+
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -5,77 +7,53 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <streambuf>
 
-#include "common.cuh"
-
-LoggerStreamBuf::LoggerStreamBuf(std::streambuf* sb1, std::streambuf* sb2)
-    : sb1(sb1), sb2(sb2) {}
-
-std::streambuf::int_type LoggerStreamBuf::overflow(int_type c) {
-    if (c == traits_type::eof()) {
-        return traits_type::not_eof(c);
-    } else {
-        int_type r1 = sb1->sputc(c);
-        int_type r2 = sb2->sputc(c);
-        return (r1 == traits_type::eof() || r2 == traits_type::eof()) ? traits_type::eof() : c;
-    }
-}
-
-int LoggerStreamBuf::sync() {
-    int r1 = sb1->pubsync();
-    int r2 = sb2->pubsync();
-    return (r1 == 0 && r2 == 0) ? 0 : -1;
-}
-
-Logger::Logger(const std::string& filename) {
-    fileStream.open(filename);
-    if (!fileStream.is_open()) {
-        std::cerr << "Failed to open log file: " << filename << "\n";
-        exit(EXIT_FAILURE);
-    }
-    teeBuf = std::make_unique<LoggerStreamBuf>(std::cout.rdbuf(), fileStream.rdbuf());
-    oldCoutBuf = std::cout.rdbuf(teeBuf.get());
-}
-
-Logger::~Logger() {
-    std::cout.rdbuf(oldCoutBuf);
-    if (fileStream.is_open()) {
-        fileStream.close();
-    }
-}
-
-void allocatePointCloud(PointCloud& pc, int n) {
+void allocatePointCloudInt(PointCloudInt &pc, int32_t n) {
     pc.numPoints = n;
-    pc.x = new float[n];
-    pc.y = new float[n];
-    pc.z = new float[n];
-    pc.intensity = new int[n];
+    pc.x = new int32_t[n];
+    pc.y = new int32_t[n];
+    pc.z = new int32_t[n];
+    pc.intensity = new int32_t[n];
 }
 
-void freePointCloud(PointCloud& pc) {
+void freePointCloudInt(PointCloudInt &pc) {
     delete[] pc.x;
     delete[] pc.y;
     delete[] pc.z;
     delete[] pc.intensity;
 }
 
-bool readInputFile(const std::string& filename, PointCloud& pc, int& k, int& T) {
+void allocatePointCloudFloat(PointCloudFloat &pc, int32_t n) {
+    pc.numPoints = n;
+    pc.x = new float[n];
+    pc.y = new float[n];
+    pc.z = new float[n];
+    pc.intensity = new int32_t[n];
+}
+
+void freePointCloudFloat(PointCloudFloat &pc) {
+    delete[] pc.x;
+    delete[] pc.y;
+    delete[] pc.z;
+    delete[] pc.intensity;
+}
+
+bool readInputFileInt(const std::string &filename, PointCloudInt &pc, int32_t &k, int32_t &T) {
     std::ifstream inFile(filename);
     if (!inFile.is_open()) {
         std::cerr << "Failed to open input file: " << filename << "\n";
         return false;
     }
 
-    int n;
+    int32_t n;
     if (!(inFile >> n >> k >> T)) {
         std::cerr << "Error reading header variables (n, k, T) from file.\n";
         return false;
     }
 
-    allocatePointCloud(pc, n);
+    allocatePointCloudInt(pc, n);
 
-    for (int i = 0; i < n; ++i) {
+    for (int32_t i = 0; i < n; ++i) {
         inFile >> pc.x[i] >> pc.y[i] >> pc.z[i] >> pc.intensity[i];
     }
 
@@ -83,66 +61,98 @@ bool readInputFile(const std::string& filename, PointCloud& pc, int& k, int& T) 
     return true;
 }
 
-std::string formatDuration(std::chrono::nanoseconds d) {
-    double seconds = std::chrono::duration<double>(d).count();
-
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(3);
-
-    if (seconds < 1e-6) {
-        oss << std::chrono::duration<double, std::nano>(d).count() << " ns";
-    }
-    else if (seconds < 1e-3) {
-        oss << std::chrono::duration<double, std::micro>(d).count() << " µs";
-    }
-    else if (seconds < 1.0) {
-        oss << std::chrono::duration<double, std::milli>(d).count() << " ms";
-    }
-    else {
-        oss << seconds << " s";
+bool readInputFileFloat(const std::string &filename, PointCloudFloat &pc, int32_t &k, int32_t &T) {
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        std::cerr << "Failed to open input file: " << filename << "\n";
+        return false;
     }
 
-    return oss.str();
+    int32_t n;
+    if (!(inFile >> n >> k >> T)) {
+        std::cerr << "Error reading header variables (n, k, T) from file.\n";
+        return false;
+    }
+
+    allocatePointCloudFloat(pc, n);
+
+    for (int32_t i = 0; i < n; ++i) {
+        inFile >> pc.x[i] >> pc.y[i] >> pc.z[i] >> pc.intensity[i];
+    }
+
+    inFile.close();
+    return true;
 }
 
-bool writeOutputFile(const std::string& filename, const PointCloud& pc, const int* newIntensities) {
+bool writeOutputFileInt(const std::string &filename, const PointCloudInt &pc,
+                        const int32_t *newIntensities) {
     std::ofstream outFile(filename);
     if (!outFile.is_open()) {
         std::cerr << "Failed to open output file: " << filename << "\n";
         return false;
     }
-    
-    for (int i = 0; i < pc.numPoints; ++i) {
+
+    for (int32_t i = 0; i < pc.numPoints; ++i) {
         outFile << pc.x[i] << " " << pc.y[i] << " " << pc.z[i] << " " << newIntensities[i] << "\n";
     }
-    
+
     outFile.close();
     return true;
 }
 
-void validateOutputs(const int* cpuOutput, const int* gpuOutput, int n) {
-    int mismatches = 0;
-    int maxDifference = 0;
-
-    for (int i = 0; i < n; ++i) {
-        if (cpuOutput[i] != gpuOutput[i]) {
-            mismatches++;
-            int diff = std::abs(cpuOutput[i] - gpuOutput[i]);
-            if (diff > maxDifference) {
-                maxDifference = diff;
-            }
-            if (mismatches <= 5) {
-                std::cout << "   Mismatch at index " << i 
-                          << ": CPU=" << cpuOutput[i] 
-                          << ", GPU=" << gpuOutput[i] << "\n";
-            }
-        }
+bool writeOutputFileFloat(const std::string &filename, const PointCloudFloat &pc,
+                          const int32_t *newIntensities) {
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        std::cerr << "Failed to open output file: " << filename << "\n";
+        return false;
     }
 
-    if (mismatches == 0) {
-        std::cout << "Validation PASSED: CPU and GPU outputs match perfectly!\n";
+    for (int32_t i = 0; i < pc.numPoints; ++i) {
+        outFile << pc.x[i] << " " << pc.y[i] << " " << pc.z[i] << " " << newIntensities[i] << "\n";
+    }
+
+    outFile.close();
+    return true;
+}
+
+float calculateMAEInt(const int32_t *exact, const int32_t *approx, int32_t numPoints) {
+    if (numPoints <= 0)
+        return 0.0f;
+    long long totalError = 0;
+#pragma omp parallel for reduction(+ : totalError)
+    for (int32_t i = 0; i < numPoints; ++i) {
+        totalError += std::abs(exact[i] - approx[i]);
+    }
+    return static_cast<float>(totalError) / numPoints;
+}
+
+float calculateMAEFloat(const int32_t *exact, const int32_t *approx, int32_t numPoints) {
+    if (numPoints <= 0)
+        return 0.0f;
+    long long totalError = 0;
+#pragma omp parallel for reduction(+ : totalError)
+    for (int32_t i = 0; i < numPoints; ++i) {
+        totalError += std::abs(exact[i] - approx[i]);
+    }
+    return static_cast<float>(totalError) / numPoints;
+}
+
+std::string formatDuration(float ms) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3);
+
+    double ns = static_cast<double>(ms) * 1e6;
+
+    if (ns < 1e3) {
+        oss << ns << " ns";
+    } else if (ns < 1e6) {
+        oss << (ns / 1e3) << " µs";
+    } else if (ns < 1e9) {
+        oss << ms << " ms";
     } else {
-        std::cout << "Validation FAILED: " << mismatches << " mismatches found.\n";
-        std::cout << "   Maximum intensity difference: " << maxDifference << "\n";
+        oss << (ms / 1e3) << " s";
     }
+
+    return oss.str();
 }

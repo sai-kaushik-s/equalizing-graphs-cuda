@@ -1,0 +1,22 @@
+{
+    "cSpell.words": [
+        "accum",
+        "CDFGPU",
+        "cerr",
+        "chrono",
+        "cout",
+        "endl",
+        "fstream",
+        "ifstream",
+        "kmeans",
+        "KNNGPU",
+        "milli",
+        "ofstream",
+        "ostringstream",
+        "pubsync",
+        "rdbuf",
+        "setprecision",
+        "sputc",
+        "sstream"
+    ]
+}
