@@ -6,7 +6,7 @@ A high-performance CUDA implementation for point cloud intensity equalization. T
 
 - **[Technical Documentation](Documentation.md)**: Detailed technical explanation of every function, member function, and CUDA kernel.
 - **[Project Report (PDF)](docs/Report.pdf)**: Comprehensive analysis of the algorithms, performance results, and architectural decisions.
-- **[Interactive 3D Visualization](plots/visualization.html)**: A side-by-side comparison plotly plot of the different equalization methods (Open in a browser).
+- **[Interactive 3D Visualization](https://sai-kaushik-s.github.io/equalizing-graphs-cuda/plots/visualization.html)**: A side-by-side comparison plotly plot of the different equalization methods (Open in a browser).
 
 ## Algorithms Implemented
 
